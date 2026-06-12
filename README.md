@@ -5,7 +5,7 @@
 ## 项目结构
 
 ```
-codex/
+project/
 ├── CMakeLists.txt          # CMake 构建配置
 ├── README.md
 ├── include/
@@ -31,7 +31,7 @@ codex/
 ### PC 调试编译 (x86_64)
 
 ```bash
-cd codex
+cd project
 mkdir build && cd build
 cmake ..
 make -j4
@@ -41,7 +41,7 @@ make -j4
 ### 交叉编译到 GEC6818 开发板 (ARM)
 
 ```bash
-cd codex
+cd project
 mkdir build-arm && cd build-arm
 cmake .. \
     -DCMAKE_C_COMPILER=arm-linux-gcc \

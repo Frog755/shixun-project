@@ -20,7 +20,7 @@
 ## 第一步: 编译 (在 Linux 虚拟机，一行搞定)
 
 ```bash
-cd /mnt/hgfs/shixun/codex
+cd /mnt/hgfs/shixun/project
 ./build.sh
 ```
 
@@ -163,7 +163,7 @@ sqlite3 /opt/gate.db "SELECT * FROM vehicle_records;"
 ### 编译 Qt 应用
 
 ```bash
-cd /mnt/hgfs/shixun/codex
+cd /mnt/hgfs/shixun/project
 mkdir -p build-arm && cd build-arm
 
 # 注意: 不要用 CMAKE_PREFIX_PATH，要用 toolchain 文件
@@ -183,7 +183,7 @@ unzip "/mnt/hgfs/shixun/09_opencv/原资料/zeusees-HyperLPR-master源码包.zip
 cd HyperLPR/Prj-Linux/lpr   # 注意顶层目录是 HyperLPR/
 
 # 替换 main.cpp
-cp /mnt/hgfs/shixun/codex/src/alpr_main.cpp ./main.cpp
+cp /mnt/hgfs/shixun/project/src/alpr_main.cpp ./main.cpp
 
 # CMakeLists.txt 需要:
 # - 注释掉 find_package(OpenCV) 和所有 add_executable(TEST_*)

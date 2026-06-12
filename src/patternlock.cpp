@@ -30,19 +30,20 @@ void PatternLock::buildGrid()
     int minDim = qMin(width(), height());
     dotRadius_ = qMax(20, minDim / 10);
 
-    int margin = dotRadius_ + 15;
-    int usableW = width() - 2 * margin;
-    int usableH = height() - 2 * margin;
+    // 计算正方形网格大小（取宽高中较小值的 60%）
+    int gridSize = minDim * 60 / 100;
 
-    if (usableW <= 0 || usableH <= 0) return;
+    // 计算间距
+    int spacing = gridSize / (cols - 1);
 
-    int spacingX = (cols > 1) ? usableW / (cols - 1) : 0;
-    int spacingY = (rows > 1) ? usableH / (rows - 1) : 0;
+    // 计算起始位置（居中）
+    int startX = (width() - gridSize) / 2;
+    int startY = (height() - gridSize) / 2;
 
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
-            int x = margin + c * spacingX;
-            int y = margin + r * spacingY;
+            int x = startX + c * spacing;
+            int y = startY + r * spacing;
             points_.append(QPoint(x, y));
         }
     }

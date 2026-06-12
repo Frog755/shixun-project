@@ -10,7 +10,7 @@
 #    ./build.sh deploy              # 只打包部署文件
 #
 #  链路: Windows (claude code) 写代码
-#       -> VMware 共享目录 /mnt/hgfs/shixun/codex
+#       -> VMware 共享目录 /mnt/hgfs/shixun/project
 #       -> 本脚本编译
 #       -> 部署包在 /tmp/deploy_alpr/
 #       -> 人工拷贝到开发板

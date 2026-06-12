@@ -14,6 +14,7 @@
 #include <QProcessEnvironment>
 #include <QMessageBox>
 #include <opencv2/opencv.hpp>
+#include <QMap>
 
 // 命名管道路径
 #define PIPE_INBOUND  "/tmp/alpr_inbound"
@@ -25,6 +26,9 @@
 #define ALPR_BIN      "./alpr/alpr"
 // 备选: 兼容老路径 (如果有人把 alpr 直接放在 /opt/)
 // 也可以这样调用: /opt/alpr_deploy/alpr 等等
+
+// 前向声明
+class RfidReader;
 
 /**
  * @brief 摄像头视频显示组件
@@ -77,6 +81,10 @@ private slots:
     void onLockClicked();
     void onAlprFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void onSoundFinished();
+    void onCardDetected(const QString &cardId);  // RFID 卡检测到
+    void onRfidError(const QString &errorMsg);   // RFID 错误
+    void onIdleTimeout();  // 空闲超时锁屏
+    void onViewRecordsClicked();  // 查看记录
 
 private:
     void setupUI();
@@ -87,18 +95,33 @@ private:
     QString queryInboundTime(const QString &dbPath, const QString &plate);
     void showBill(const QString &plate, const QString &inTimeStr);
     void playSound(const QString &name);
+    void startRfidReader();  // 启动 RFID 读取器
+    void stopRfidReader();   // 停止 RFID 读取器
+    QString lookupPlate(const QString &cardId);  // 根据卡号查找车牌
+    int countVehiclesInPark();  // 统计当前库内车辆数
+    void updateParkingCount();  // 更新车位计数显示
+    void showRecentRecords();   // 显示最近记录
 
     CameraViewer *cameraViewer_;
     QPushButton *inboundBtn_;
     QPushButton *outboundBtn_;
     QPushButton *lockBtn_;
+    QPushButton *viewRecordsBtn_;  // 查看记录按钮
     QLabel *statusLabel_;
+    QLabel *rfidStatusLabel_;  // RFID 状态标签
+    QLabel *parkingCountLabel_;  // 车位计数标签
 
     QProcess *alprProcess_;
     QProcess *soundProcess_;
     bool currentIsInbound_;
     QString currentPipePath_;
     int pipeReadFd_;  // 管道读端，先打开再启动 alpr 避免死锁
+    QTimer *idleTimer_;  // 空闲超时定时器
+
+    // RFID 相关
+    RfidReader *rfidReader_;  // RFID 读取器线程
+    QMap<QString, QString> cardPlateMap_;  // 卡号 -> 车牌映射
+    QString rfidCurrentPlate_;  // 当前 RFID 识别的车牌号
 };
 
 #endif // MAINWINDOW_H

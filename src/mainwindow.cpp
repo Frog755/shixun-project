@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "rfidreader.h"
 #include <QResizeEvent>
 #include <QDebug>
 #include <QShowEvent>
@@ -161,13 +162,33 @@ MainWindow::MainWindow(QWidget *parent)
     , soundProcess_(nullptr)
     , currentIsInbound_(false)
     , pipeReadFd_(-1)
+    , rfidReader_(nullptr)
 {
     setAttribute(Qt::WA_StyledBackground, true);
+
+    // 初始化卡号-车牌映射（硬编码）
+    cardPlateMap_["83533443"] = "贵B91VIP";
+
     setupUI();
+    startRfidReader();
+    updateParkingCount();  // 初始化车位计数
+
+    // 初始化空闲超时定时器（1分钟）
+    idleTimer_ = new QTimer(this);
+    idleTimer_->setSingleShot(true);
+    idleTimer_->setInterval(60000);  // 60秒
+    QObject::connect(idleTimer_, SIGNAL(timeout()), this, SLOT(onIdleTimeout()));
+    idleTimer_->start();
+    qDebug() << "空闲超时定时器已启动 (60秒)";
 }
 
 MainWindow::~MainWindow()
 {
+    stopRfidReader();
+    if (idleTimer_) {
+        idleTimer_->stop();
+    }
+
     if (alprProcess_) {
         alprProcess_->kill();
         alprProcess_->waitForFinished(1000);
@@ -189,8 +210,8 @@ void MainWindow::setupUI()
     );
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(20, 20, 20, 20);
-    mainLayout->setSpacing(20);
+    mainLayout->setContentsMargins(10, 10, 10, 10);
+    mainLayout->setSpacing(10);
 
     // === 左侧：摄像头 ===
     cameraViewer_ = new CameraViewer(this);
@@ -213,8 +234,8 @@ void MainWindow::setupUI()
         "}"
     );
     QVBoxLayout *btnLayout = new QVBoxLayout(btnFrame);
-    btnLayout->setContentsMargins(10, 40, 10, 40);
-    btnLayout->setSpacing(20);
+    btnLayout->setContentsMargins(10, 15, 10, 15);
+    btnLayout->setSpacing(10);
 
     QLabel *titleLabel = new QLabel("操作菜单", btnFrame);
     titleLabel->setStyleSheet(
@@ -222,7 +243,7 @@ void MainWindow::setupUI()
         "    font-size: 22px; "
         "    font-weight: bold; "
         "    color: #e0e0e0; "
-        "    padding: 10px 0 30px 0; "
+        "    padding: 5px 0 10px 0; "
         "}"
     );
     titleLabel->setAlignment(Qt::AlignCenter);
@@ -241,9 +262,41 @@ void MainWindow::setupUI()
     statusLabel_->setWordWrap(true);
     btnLayout->addWidget(statusLabel_);
 
+    // RFID 状态标签
+    rfidStatusLabel_ = new QLabel("等待刷卡...", btnFrame);
+    rfidStatusLabel_->setStyleSheet(
+        "QLabel { "
+        "    font-size: 12px; "
+        "    color: #aaaaaa; "
+        "    padding: 5px; "
+        "    background-color: #0a0a1a; "
+        "    border: 1px solid #3a3a5e; "
+        "    border-radius: 4px; "
+        "}"
+    );
+    rfidStatusLabel_->setAlignment(Qt::AlignCenter);
+    rfidStatusLabel_->setWordWrap(true);
+    btnLayout->addWidget(rfidStatusLabel_);
+
+    // 车位计数标签
+    parkingCountLabel_ = new QLabel("当前库内：0 辆", btnFrame);
+    parkingCountLabel_->setStyleSheet(
+        "QLabel { "
+        "    font-size: 16px; "
+        "    font-weight: bold; "
+        "    color: #00ff88; "
+        "    padding: 8px; "
+        "    background-color: #0a1a30; "
+        "    border: 1px solid #00ff88; "
+        "    border-radius: 6px; "
+        "}"
+    );
+    parkingCountLabel_->setAlignment(Qt::AlignCenter);
+    btnLayout->addWidget(parkingCountLabel_);
+
     inboundBtn_ = new QPushButton("车辆入库", btnFrame);
     inboundBtn_->setStyleSheet(
-        "QPushButton { font-size: 18px; font-weight: bold; background-color: #0f3460; color: #00d4ff; border: 2px solid #00d4ff; border-radius: 8px; padding: 18px 8px; }"
+        "QPushButton { font-size: 18px; font-weight: bold; background-color: #0f3460; color: #00d4ff; border: 2px solid #00d4ff; border-radius: 8px; padding: 12px 8px; }"
         "QPushButton:pressed { background-color: #0a2540; }"
         "QPushButton:disabled { background-color: #0a1a30; color: #555; border-color: #555; }"
     );
@@ -252,7 +305,7 @@ void MainWindow::setupUI()
 
     outboundBtn_ = new QPushButton("车辆出库", btnFrame);
     outboundBtn_->setStyleSheet(
-        "QPushButton { font-size: 18px; font-weight: bold; background-color: #0f3460; color: #00d4ff; border: 2px solid #00d4ff; border-radius: 8px; padding: 18px 8px; }"
+        "QPushButton { font-size: 18px; font-weight: bold; background-color: #0f3460; color: #00d4ff; border: 2px solid #00d4ff; border-radius: 8px; padding: 12px 8px; }"
         "QPushButton:pressed { background-color: #0a2540; }"
         "QPushButton:disabled { background-color: #0a1a30; color: #555; border-color: #555; }"
     );
@@ -261,9 +314,18 @@ void MainWindow::setupUI()
 
     btnLayout->addStretch(1);
 
+    // 查看记录按钮
+    viewRecordsBtn_ = new QPushButton("查看记录", btnFrame);
+    viewRecordsBtn_->setStyleSheet(
+        "QPushButton { font-size: 16px; font-weight: bold; background-color: #1a3a5c; color: #88ccff; border: 2px solid #88ccff; border-radius: 8px; padding: 10px 8px; }"
+        "QPushButton:pressed { background-color: #0a2540; }"
+    );
+    QObject::connect(viewRecordsBtn_, SIGNAL(clicked()), this, SLOT(onViewRecordsClicked()));
+    btnLayout->addWidget(viewRecordsBtn_);
+
     lockBtn_ = new QPushButton("锁屏", btnFrame);
     lockBtn_->setStyleSheet(
-        "QPushButton { font-size: 18px; font-weight: bold; background-color: #533483; color: #ffffff; border: 2px solid #e94560; border-radius: 8px; padding: 18px 8px; }"
+        "QPushButton { font-size: 18px; font-weight: bold; background-color: #533483; color: #ffffff; border: 2px solid #e94560; border-radius: 8px; padding: 12px 8px; }"
         "QPushButton:pressed { background-color: #3a2560; }"
     );
     QObject::connect(lockBtn_, SIGNAL(clicked()), this, SLOT(onLockClicked()));
@@ -277,9 +339,11 @@ void MainWindow::setupUI()
 void MainWindow::onInboundClicked()
 {
     qDebug() << "车辆入库 - 开始抓拍识别";
+    idleTimer_->start();  // 重置空闲定时器
     playSound("1");
     currentIsInbound_ = true;
     currentPipePath_ = PIPE_INBOUND;
+    rfidCurrentPlate_.clear();  // 清空 RFID 车牌，避免干扰
 
     // 1. 抓拍照片
     if (!cameraViewer_->snapPhoto(SNAP_PATH)) {
@@ -297,9 +361,11 @@ void MainWindow::onInboundClicked()
 void MainWindow::onOutboundClicked()
 {
     qDebug() << "车辆出库 - 开始抓拍识别";
+    idleTimer_->start();  // 重置空闲定时器
     playSound("2");
     currentIsInbound_ = false;
     currentPipePath_ = PIPE_OUTBOUND;
+    rfidCurrentPlate_.clear();  // 清空 RFID 车牌，避免干扰
 
     if (!cameraViewer_->snapPhoto(SNAP_PATH)) {
         statusLabel_->setText("抓拍失败，请检查摄像头");
@@ -411,7 +477,13 @@ void MainWindow::onAlprFinished(int exitCode, QProcess::ExitStatus exitStatus)
     outboundBtn_->setEnabled(true);
 
     if (plate.isEmpty() || plate == "NONE") {
-        statusLabel_->setText("未识别到车牌，请重试");
+        // ALPR 识别失败，但 RFID 流程中已有车牌号
+        if (!rfidCurrentPlate_.isEmpty()) {
+            qDebug() << "ALPR 识别失败，使用 RFID 映射车牌:" << rfidCurrentPlate_;
+            showPlateResult(rfidCurrentPlate_, currentIsInbound_);
+        } else {
+            statusLabel_->setText("未识别到车牌，请重试");
+        }
         return;
     }
 
@@ -421,6 +493,12 @@ void MainWindow::onAlprFinished(int exitCode, QProcess::ExitStatus exitStatus)
 
 void MainWindow::showPlateResult(const QString &plate, bool isInbound)
 {
+    // 检查车牌号是否为空
+    if (plate.isEmpty()) {
+        statusLabel_->setText("车牌号为空，请重试");
+        return;
+    }
+
     QString action = isInbound ? "入库" : "出库";
     statusLabel_->setText(QString("识别结果: %1").arg(plate));
 
@@ -470,6 +548,7 @@ void MainWindow::showPlateResult(const QString &plate, bool isInbound)
     msgBox->button(QMessageBox::No)->setText("取消");
 
     int ret = msgBox->exec();
+    idleTimer_->start();  // 重置空闲定时器
     if (ret == QMessageBox::Yes) {
         if (!isInbound) {
             // 出库：查入库时间，算账单
@@ -477,6 +556,7 @@ void MainWindow::showPlateResult(const QString &plate, bool isInbound)
             showBill(plate, inTime);
         }
         saveToDatabase(dbPath, plate, isInbound);
+        updateParkingCount();  // 更新车位计数
         playSound(isInbound ? "3" : "4");
         statusLabel_->setText(QString("车牌 %1 已%2").arg(plate, action));
     } else {
@@ -498,6 +578,37 @@ static QString plateToKey(const QString &plate)
         }
     }
     return key;
+}
+
+// 将 Unicode 码点 key 转回车牌
+// "U+8D35B91VIP" → "贵B91VIP", "U+4EACB12345" → "京B12345"
+static QString keyToPlate(const QString &key)
+{
+    QString plate;
+    int i = 0;
+    while (i < key.length()) {
+        if (i + 1 < key.length() && key[i] == 'U' && key[i + 1] == '+') {
+            // 解析 Unicode 码点（固定4位十六进制）
+            i += 2;  // 跳过 "U+"
+            if (i + 4 <= key.length()) {
+                QString hex = key.mid(i, 4);
+                bool ok;
+                ushort code = hex.toUShort(&ok, 16);
+                if (ok) {
+                    plate += QChar(code);
+                    i += 4;
+                } else {
+                    plate += "U+";
+                }
+            } else {
+                plate += "U+";
+            }
+        } else {
+            plate += key[i];
+            i++;
+        }
+    }
+    return plate;
 }
 
 QString MainWindow::queryLastAction(const QString &dbPath, const QString &plate)
@@ -624,6 +735,7 @@ void MainWindow::showEvent(QShowEvent *event)
         qDebug() << "MainWindow 显示，启动摄像头";
         cameraViewer_->startCamera();
     }
+    idleTimer_->start();  // 重置空闲定时器
 }
 
 void MainWindow::playSound(const QString &name)
@@ -653,4 +765,260 @@ void MainWindow::playSound(const QString &name)
 void MainWindow::onSoundFinished()
 {
     qDebug() << "音频播放结束";
+}
+
+// ============ RFID 相关方法 ============
+
+void MainWindow::startRfidReader()
+{
+    // 创建 RFID 读取器，使用 UART1
+    // TODO: 根据实际硬件连接修改串口设备路径
+    rfidReader_ = new RfidReader("/dev/ttySAC1", this);
+
+    // 连接信号槽
+    QObject::connect(rfidReader_, SIGNAL(cardDetected(QString)),
+                     this, SLOT(onCardDetected(QString)));
+    QObject::connect(rfidReader_, SIGNAL(errorOccurred(QString)),
+                     this, SLOT(onRfidError(QString)));
+
+    // 启动线程
+    rfidReader_->start();
+    qDebug() << "RFID 读取器已启动";
+}
+
+void MainWindow::stopRfidReader()
+{
+    if (rfidReader_) {
+        rfidReader_->stop();
+        delete rfidReader_;
+        rfidReader_ = nullptr;
+        qDebug() << "RFID 读取器已停止";
+    }
+}
+
+QString MainWindow::lookupPlate(const QString &cardId)
+{
+    // 在映射表中查找车牌号
+    if (cardPlateMap_.contains(cardId)) {
+        return cardPlateMap_[cardId];
+    }
+    return QString();
+}
+
+void MainWindow::onCardDetected(const QString &cardId)
+{
+    qDebug() << "检测到 RFID 卡:" << cardId;
+    idleTimer_->start();  // 重置空闲定时器
+
+    // 更新 UI 状态
+    rfidStatusLabel_->setText(QString("已刷卡: %1").arg(cardId));
+    rfidStatusLabel_->setStyleSheet(
+        "QLabel { "
+        "    font-size: 12px; "
+        "    color: #00ff00; "
+        "    padding: 5px; "
+        "    background-color: #0a0a1a; "
+        "    border: 1px solid #3a3a5e; "
+        "    border-radius: 4px; "
+        "}"
+    );
+
+    // 查找对应的车牌号
+    QString plate = lookupPlate(cardId);
+    if (plate.isEmpty()) {
+        statusLabel_->setText(QString("未知卡号: %1").arg(cardId));
+        rfidStatusLabel_->setText(QString("未知卡: %1").arg(cardId));
+        rfidStatusLabel_->setStyleSheet(
+            "QLabel { "
+            "    font-size: 12px; "
+            "    color: #ff6b6b; "
+            "    padding: 5px; "
+            "    background-color: #0a0a1a; "
+            "    border: 1px solid #3a3a5e; "
+            "    border-radius: 4px; "
+            "}"
+        );
+        return;
+    }
+
+    statusLabel_->setText(QString("识别到车牌: %1").arg(plate));
+
+    // 保存当前 RFID 识别的车牌号，供 ALPR 失败时使用
+    rfidCurrentPlate_ = plate;
+
+    // 查询数据库判断入库还是出库
+    QString dbPath = "/frog/gate.db";
+    QString lastAction = queryLastAction(dbPath, plate);
+
+    qDebug() << "========== RFID 自动判断 ==========";
+    qDebug() << "车牌:" << plate;
+    qDebug() << "数据库最后状态:" << lastAction;
+
+    bool isInbound;
+    if (lastAction.isEmpty() || lastAction == "outbound") {
+        // 车辆不在库内，执行入库
+        isInbound = true;
+        qDebug() << ">>> 判断结果: 入库";
+    } else {
+        // 车辆在库内，执行出库
+        isInbound = false;
+        qDebug() << ">>> 判断结果: 出库";
+    }
+    qDebug() << "====================================";
+
+    // 播放提示音
+    playSound(isInbound ? "1" : "2");
+
+    // 设置当前操作类型
+    currentIsInbound_ = isInbound;
+    currentPipePath_ = isInbound ? PIPE_INBOUND : PIPE_OUTBOUND;
+
+    // 抓拍照片
+    if (!cameraViewer_->snapPhoto(SNAP_PATH)) {
+        statusLabel_->setText("抓拍失败，请检查摄像头");
+        return;
+    }
+
+    statusLabel_->setText(QString("照片已抓拍，正在识别车牌: %1...").arg(plate));
+
+    // 禁用按钮，防止重复操作
+    inboundBtn_->setEnabled(false);
+    outboundBtn_->setEnabled(false);
+
+    // 启动 ALPR 识别
+    runALPR(SNAP_PATH, currentPipePath_);
+}
+
+void MainWindow::onRfidError(const QString &errorMsg)
+{
+    qWarning() << "RFID 错误:" << errorMsg;
+    rfidStatusLabel_->setText("RFID 错误: " + errorMsg);
+    rfidStatusLabel_->setStyleSheet(
+        "QLabel { "
+        "    font-size: 12px; "
+        "    color: #ff6b6b; "
+        "    padding: 5px; "
+        "    background-color: #0a0a1a; "
+        "    border: 1px solid #3a3a5e; "
+        "    border-radius: 4px; "
+        "}"
+    );
+}
+
+// ============ 空闲超时锁屏 ============
+
+void MainWindow::onIdleTimeout()
+{
+    qDebug() << "空闲超时，自动锁屏";
+    emit lockRequested();
+}
+
+// ============ 车位计数 ============
+
+int MainWindow::countVehiclesInPark()
+{
+    QString dbPath = "/frog/gate.db";
+    QFile file(dbPath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return 0;
+    }
+
+    // 遍历数据库，统计每辆车的最后状态
+    QMap<QString, QString> lastActions;
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty()) continue;
+        QStringList parts = line.split(",");
+        if (parts.size() >= 2) {
+            lastActions[parts[0]] = parts[1];
+        }
+    }
+    file.close();
+
+    // 统计状态为 "inbound" 的车辆数
+    int count = 0;
+    for (const QString &action : lastActions.values()) {
+        if (action == "inbound") {
+            count++;
+        }
+    }
+    return count;
+}
+
+void MainWindow::updateParkingCount()
+{
+    int count = countVehiclesInPark();
+    parkingCountLabel_->setText(QString("当前库内：%1 辆").arg(count));
+    qDebug() << "车位计数更新:" << count;
+}
+
+// ============ 进出记录查看 ============
+
+void MainWindow::onViewRecordsClicked()
+{
+    qDebug() << "查看记录按钮点击";
+    showRecentRecords();
+}
+
+void MainWindow::showRecentRecords()
+{
+    QString dbPath = "/frog/gate.db";
+    QFile file(dbPath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::information(this, "提示", "暂无记录");
+        return;
+    }
+
+    // 读取所有记录
+    QStringList lines;
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (!line.isEmpty()) {
+            lines.append(line);
+        }
+    }
+    file.close();
+
+    // 只显示最近 20 条
+    int start = qMax(0, lines.size() - 20);
+    QStringList recentLines;
+    for (int i = start; i < lines.size(); i++) {
+        recentLines.append(lines[i]);
+    }
+
+    // 格式化显示
+    QString recordText;
+    recordText += "===== 最近进出记录 =====\n\n";
+
+    for (const QString &line : recentLines) {
+        QStringList parts = line.split(",");
+        if (parts.size() >= 3) {
+            // 将 Unicode 码点转换回中文车牌
+            QString key = parts[0];
+            QString plate = keyToPlate(key);
+            QString action = parts[1] == "inbound" ? "入库" : "出库";
+            QString time = parts[2];
+
+            recordText += QString("%1  %2  %3\n")
+                .arg(plate.leftJustified(10))
+                .arg(action)
+                .arg(time);
+        }
+    }
+
+    recordText += "\n========================";
+
+    QMessageBox *recordBox = new QMessageBox(this);
+    recordBox->setStyleSheet(
+        "QMessageBox { background-color: #1a1a2e; }"
+        "QLabel { color: #e0e0e0; font-size: 12px; font-family: monospace; }"
+        "QPushButton { font-size: 14px; min-width: 80px; padding: 8px; "
+        "    background-color: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; "
+        "    border-radius: 4px; }"
+    );
+    recordBox->setWindowTitle("进出记录");
+    recordBox->setText(recordText);
+    recordBox->exec();
 }

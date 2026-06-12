@@ -74,6 +74,7 @@ set(SOURCES
     src/patternlock.cpp
     src/lockscreen.cpp
     src/mainwindow.cpp
+    src/rfidreader.cpp
 )
 
 # 生成 moc 文件
@@ -82,6 +83,7 @@ set(MOC_HDRS
     ${CMAKE_SOURCE_DIR}/include/lockscreen.h
     ${CMAKE_SOURCE_DIR}/include/mainwindow.h
     ${CMAKE_SOURCE_DIR}/include/bridge.h
+    ${CMAKE_SOURCE_DIR}/include/rfidreader.h
 )
 
 set(MOC_FILES)
