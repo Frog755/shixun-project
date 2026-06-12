@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
     // ===== 用 QStackedWidget 管理两个界面 =====
     QStackedWidget *stack = new QStackedWidget();
-    stack->setStyleSheet("QStackedWidget { background-color: #1a1a2e; }");
+    stack->setStyleSheet("QStackedWidget { background-color: #f5f5f5; }");
 
     // ===== 锁屏界面 =====
     LockScreen *lockScreen = new LockScreen(stack);

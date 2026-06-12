@@ -24,8 +24,8 @@ CameraViewer::CameraViewer(QWidget *parent)
     setStyleSheet(
         "QFrame { "
         "    background-color: #000000; "
-        "    border: 2px solid #444466; "
-        "    border-radius: 8px; "
+        "    border: 1px solid #d0d0d0; "
+        "    border-radius: 12px; "
         "}"
     );
     setupUI();
@@ -46,7 +46,7 @@ void CameraViewer::setupUI()
     videoLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     videoLabel_->setStyleSheet(
         "QLabel { "
-        "    background-color: #000000; "
+        "    background-color: #1a1a1a; "
         "    color: #888888; "
         "    font-size: 16px; "
         "}"
@@ -205,21 +205,21 @@ void MainWindow::setupUI()
 {
     setStyleSheet(
         "QWidget { "
-        "    background-color: #1a1a2e; "
+        "    background-color: #f5f5f5; "
         "}"
     );
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(10, 10, 10, 10);
-    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(8, 8, 8, 8);
+    mainLayout->setSpacing(8);
 
     // === 左侧：摄像头 ===
     cameraViewer_ = new CameraViewer(this);
     cameraViewer_->setStyleSheet(
         "QFrame { "
         "    background-color: #000000; "
-        "    border: 3px solid #3a3a5e; "
-        "    border-radius: 8px; "
+        "    border: 1px solid #d0d0d0; "
+        "    border-radius: 12px; "
         "}"
     );
     mainLayout->addWidget(cameraViewer_, 3);
@@ -228,22 +228,22 @@ void MainWindow::setupUI()
     QFrame *btnFrame = new QFrame(this);
     btnFrame->setStyleSheet(
         "QFrame { "
-        "    background-color: #16213e; "
-        "    border-radius: 8px; "
-        "    border: 1px solid #3a3a5e; "
+        "    background-color: #ffffff; "
+        "    border-radius: 12px; "
+        "    border: 1px solid #e0e0e0; "
         "}"
     );
     QVBoxLayout *btnLayout = new QVBoxLayout(btnFrame);
-    btnLayout->setContentsMargins(10, 15, 10, 15);
-    btnLayout->setSpacing(10);
+    btnLayout->setContentsMargins(6, 8, 6, 8);
+    btnLayout->setSpacing(6);
 
     QLabel *titleLabel = new QLabel("操作菜单", btnFrame);
     titleLabel->setStyleSheet(
         "QLabel { "
-        "    font-size: 22px; "
+        "    font-size: 18px; "
         "    font-weight: bold; "
-        "    color: #e0e0e0; "
-        "    padding: 5px 0 10px 0; "
+        "    color: #333333; "
+        "    padding: 2px 0 3px 0; "
         "}"
     );
     titleLabel->setAlignment(Qt::AlignCenter);
@@ -253,9 +253,11 @@ void MainWindow::setupUI()
     statusLabel_ = new QLabel("", btnFrame);
     statusLabel_->setStyleSheet(
         "QLabel { "
-        "    font-size: 14px; "
-        "    color: #00d4ff; "
-        "    padding: 5px; "
+        "    font-size: 12px; "
+        "    color: #3498db; "
+        "    padding: 3px; "
+        "    background-color: #f0f8ff; "
+        "    border-radius: 5px; "
         "}"
     );
     statusLabel_->setAlignment(Qt::AlignCenter);
@@ -266,12 +268,12 @@ void MainWindow::setupUI()
     rfidStatusLabel_ = new QLabel("等待刷卡...", btnFrame);
     rfidStatusLabel_->setStyleSheet(
         "QLabel { "
-        "    font-size: 12px; "
-        "    color: #aaaaaa; "
-        "    padding: 5px; "
-        "    background-color: #0a0a1a; "
-        "    border: 1px solid #3a3a5e; "
-        "    border-radius: 4px; "
+        "    font-size: 10px; "
+        "    color: #888888; "
+        "    padding: 3px; "
+        "    background-color: #f8f8f8; "
+        "    border: 1px solid #e0e0e0; "
+        "    border-radius: 5px; "
         "}"
     );
     rfidStatusLabel_->setAlignment(Qt::AlignCenter);
@@ -282,12 +284,12 @@ void MainWindow::setupUI()
     parkingCountLabel_ = new QLabel("当前库内：0 辆", btnFrame);
     parkingCountLabel_->setStyleSheet(
         "QLabel { "
-        "    font-size: 16px; "
+        "    font-size: 14px; "
         "    font-weight: bold; "
-        "    color: #00ff88; "
-        "    padding: 8px; "
-        "    background-color: #0a1a30; "
-        "    border: 1px solid #00ff88; "
+        "    color: #27ae60; "
+        "    padding: 6px; "
+        "    background-color: #e8f5e9; "
+        "    border: 1px solid #c8e6c9; "
         "    border-radius: 6px; "
         "}"
     );
@@ -296,18 +298,18 @@ void MainWindow::setupUI()
 
     inboundBtn_ = new QPushButton("车辆入库", btnFrame);
     inboundBtn_->setStyleSheet(
-        "QPushButton { font-size: 18px; font-weight: bold; background-color: #0f3460; color: #00d4ff; border: 2px solid #00d4ff; border-radius: 8px; padding: 12px 8px; }"
-        "QPushButton:pressed { background-color: #0a2540; }"
-        "QPushButton:disabled { background-color: #0a1a30; color: #555; border-color: #555; }"
+        "QPushButton { font-size: 15px; font-weight: bold; background-color: #3498db; color: #ffffff; border: none; border-radius: 8px; padding: 8px 5px; }"
+        "QPushButton:pressed { background-color: #2980b9; }"
+        "QPushButton:disabled { background-color: #bdc3c7; color: #7f8c8d; }"
     );
     QObject::connect(inboundBtn_, SIGNAL(clicked()), this, SLOT(onInboundClicked()));
     btnLayout->addWidget(inboundBtn_);
 
     outboundBtn_ = new QPushButton("车辆出库", btnFrame);
     outboundBtn_->setStyleSheet(
-        "QPushButton { font-size: 18px; font-weight: bold; background-color: #0f3460; color: #00d4ff; border: 2px solid #00d4ff; border-radius: 8px; padding: 12px 8px; }"
-        "QPushButton:pressed { background-color: #0a2540; }"
-        "QPushButton:disabled { background-color: #0a1a30; color: #555; border-color: #555; }"
+        "QPushButton { font-size: 15px; font-weight: bold; background-color: #3498db; color: #ffffff; border: none; border-radius: 8px; padding: 8px 5px; }"
+        "QPushButton:pressed { background-color: #2980b9; }"
+        "QPushButton:disabled { background-color: #bdc3c7; color: #7f8c8d; }"
     );
     QObject::connect(outboundBtn_, SIGNAL(clicked()), this, SLOT(onOutboundClicked()));
     btnLayout->addWidget(outboundBtn_);
@@ -317,15 +319,15 @@ void MainWindow::setupUI()
     // 查看记录按钮
     viewRecordsBtn_ = new QPushButton("查看记录", btnFrame);
     viewRecordsBtn_->setStyleSheet(
-        "QPushButton { font-size: 16px; font-weight: bold; background-color: #1a3a5c; color: #88ccff; border: 2px solid #88ccff; border-radius: 8px; padding: 10px 8px; }"
-        "QPushButton:pressed { background-color: #0a2540; }"
+        "QPushButton { font-size: 13px; font-weight: bold; background-color: #95a5a6; color: #ffffff; border: none; border-radius: 6px; padding: 6px 5px; }"
+        "QPushButton:pressed { background-color: #7f8c8d; }"
     );
     QObject::connect(viewRecordsBtn_, SIGNAL(clicked()), this, SLOT(onViewRecordsClicked()));
     btnLayout->addWidget(viewRecordsBtn_);
 
     lockBtn_ = new QPushButton("锁屏", btnFrame);
     lockBtn_->setStyleSheet(
-        "QPushButton { font-size: 18px; font-weight: bold; background-color: #533483; color: #ffffff; border: 2px solid #e94560; border-radius: 8px; padding: 12px 8px; }"
+        "QPushButton { font-size: 15px; font-weight: bold; background-color: #e74c3c; color: #ffffff; border: none; border-radius: 8px; padding: 8px 5px; }"
         "QPushButton:pressed { background-color: #3a2560; }"
     );
     QObject::connect(lockBtn_, SIGNAL(clicked()), this, SLOT(onLockClicked()));
@@ -521,11 +523,11 @@ void MainWindow::showPlateResult(const QString &plate, bool isInbound)
         statusLabel_->setText(errorMsg);
         QMessageBox *errBox = new QMessageBox(this);
         errBox->setStyleSheet(
-            "QMessageBox { background-color: #1a1a2e; }"
-            "QLabel { color: #ff6b6b; font-size: 16px; }"
+            "QMessageBox { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; }"
+            "QLabel { color: #e74c3c; font-size: 16px; }"
             "QPushButton { font-size: 14px; min-width: 80px; padding: 8px; "
-            "    background-color: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; "
-            "    border-radius: 4px; }"
+            "    background-color: #e74c3c; color: #ffffff; border: none; "
+            "    border-radius: 8px; }"
         );
         errBox->setWindowTitle("操作失败");
         errBox->setText(errorMsg);
@@ -535,11 +537,11 @@ void MainWindow::showPlateResult(const QString &plate, bool isInbound)
 
     QMessageBox *msgBox = new QMessageBox(this);
     msgBox->setStyleSheet(
-        "QMessageBox { background-color: #1a1a2e; }"
-        "QLabel { color: #e0e0e0; font-size: 16px; }"
+        "QMessageBox { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; }"
+        "QLabel { color: #333333; font-size: 16px; }"
         "QPushButton { font-size: 14px; min-width: 80px; padding: 8px; "
-        "    background-color: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; "
-        "    border-radius: 4px; }"
+        "    background-color: #3498db; color: #ffffff; border: none; "
+        "    border-radius: 8px; }"
     );
     msgBox->setWindowTitle(QString("车牌%1确认").arg(action));
     msgBox->setText(QString("识别车牌: %1\n\n确认%2?").arg(plate, action));
@@ -710,11 +712,11 @@ void MainWindow::showBill(const QString &plate, const QString &inTimeStr)
 
     QMessageBox *billBox = new QMessageBox(this);
     billBox->setStyleSheet(
-        "QMessageBox { background-color: #1a1a2e; }"
-        "QLabel { color: #00d4ff; font-size: 14px; font-family: monospace; }"
+        "QMessageBox { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; }"
+        "QLabel { color: #333333; font-size: 14px; font-family: monospace; }"
         "QPushButton { font-size: 14px; min-width: 80px; padding: 8px; "
-        "    background-color: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; "
-        "    border-radius: 4px; }"
+        "    background-color: #3498db; color: #ffffff; border: none; "
+        "    border-radius: 8px; }"
     );
     billBox->setWindowTitle("出库账单");
     billBox->setText(billText);
@@ -815,11 +817,11 @@ void MainWindow::onCardDetected(const QString &cardId)
     rfidStatusLabel_->setStyleSheet(
         "QLabel { "
         "    font-size: 12px; "
-        "    color: #00ff00; "
-        "    padding: 5px; "
-        "    background-color: #0a0a1a; "
-        "    border: 1px solid #3a3a5e; "
-        "    border-radius: 4px; "
+        "    color: #27ae60; "
+        "    padding: 6px; "
+        "    background-color: #e8f5e9; "
+        "    border: 1px solid #c8e6c9; "
+        "    border-radius: 8px; "
         "}"
     );
 
@@ -831,11 +833,11 @@ void MainWindow::onCardDetected(const QString &cardId)
         rfidStatusLabel_->setStyleSheet(
             "QLabel { "
             "    font-size: 12px; "
-            "    color: #ff6b6b; "
-            "    padding: 5px; "
-            "    background-color: #0a0a1a; "
-            "    border: 1px solid #3a3a5e; "
-            "    border-radius: 4px; "
+            "    color: #e74c3c; "
+            "    padding: 6px; "
+            "    background-color: #fde8e8; "
+            "    border: 1px solid #f5c6cb; "
+            "    border-radius: 8px; "
             "}"
         );
         return;
@@ -896,11 +898,11 @@ void MainWindow::onRfidError(const QString &errorMsg)
     rfidStatusLabel_->setStyleSheet(
         "QLabel { "
         "    font-size: 12px; "
-        "    color: #ff6b6b; "
-        "    padding: 5px; "
-        "    background-color: #0a0a1a; "
-        "    border: 1px solid #3a3a5e; "
-        "    border-radius: 4px; "
+        "    color: #e74c3c; "
+        "    padding: 6px; "
+        "    background-color: #fde8e8; "
+        "    border: 1px solid #f5c6cb; "
+        "    border-radius: 8px; "
         "}"
     );
 }
@@ -1012,11 +1014,11 @@ void MainWindow::showRecentRecords()
 
     QMessageBox *recordBox = new QMessageBox(this);
     recordBox->setStyleSheet(
-        "QMessageBox { background-color: #1a1a2e; }"
-        "QLabel { color: #e0e0e0; font-size: 12px; font-family: monospace; }"
+        "QMessageBox { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; }"
+        "QLabel { color: #333333; font-size: 12px; font-family: monospace; }"
         "QPushButton { font-size: 14px; min-width: 80px; padding: 8px; "
-        "    background-color: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; "
-        "    border-radius: 4px; }"
+        "    background-color: #3498db; color: #ffffff; border: none; "
+        "    border-radius: 8px; }"
     );
     recordBox->setWindowTitle("进出记录");
     recordBox->setText(recordText);

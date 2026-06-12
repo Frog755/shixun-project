@@ -10,11 +10,11 @@ PatternLock::PatternLock(QWidget *parent)
     , isDrawing_(false)
     , isSuccess_(true)
     , isCorrectPattern_(false)
-    , lineColor_(30, 115, 230)
-    , successColor_(15, 157, 88)
-    , failColor_(219, 68, 55)
-    , dotColor_(100, 100, 140)
-    , selectedDotColor_(30, 115, 230)
+    , lineColor_(52, 152, 219)
+    , successColor_(39, 174, 96)
+    , failColor_(231, 76, 60)
+    , dotColor_(189, 195, 199)
+    , selectedDotColor_(52, 152, 219)
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -71,7 +71,7 @@ void PatternLock::paintEvent(QPaintEvent *event)
 
 void PatternLock::drawGrid(QPainter &painter)
 {
-    painter.fillRect(rect(), QColor(42, 42, 62));
+    painter.fillRect(rect(), QColor(255, 255, 255));
 }
 
 void PatternLock::drawConnections(QPainter &painter)
