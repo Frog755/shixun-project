@@ -71,8 +71,9 @@ int main(int argc, char *argv[])
     if (QFile::exists(startVideo)) {
         printf("播放启动动画...\n");
         stack->hide();
+        app.processEvents();
 
-        // 同时启动视频(mplayer 静音) + 音频(madplay)
+        // 同时启动视频 + 音频
         QProcess videoProc;
         QProcess audioProc;
         videoProc.start("mplayer", QStringList()
@@ -82,20 +83,33 @@ int main(int argc, char *argv[])
                         << startVideo);
         audioProc.start("madplay", QStringList() << "/frog/start.mp3");
 
-        if (!videoProc.waitForFinished(8000)) {
-            videoProc.kill();
-            videoProc.waitForFinished(1000);
-        }
+        // 等待 3 秒（不等待视频完成）
+        usleep(3000000);
+
+        // 强制停止视频和音频
+        videoProc.kill();
+        videoProc.waitForFinished(1000);
         audioProc.kill();
         audioProc.waitForFinished(500);
 
-        usleep(200000);
-        QProcess::execute("dd", QStringList()
-                          << "if=/dev/zero" << "of=/dev/fb0"
-                          << "bs=1536000" << "count=1");
-        usleep(100000);
+        // 清除 framebuffer
+        system("dd if=/dev/zero of=/dev/fb0 bs=1536000 count=1 2>/dev/null");
+        usleep(300000);
+
         printf("启动动画结束\n");
+
+        // 强制刷新 Qt 界面
         stack->show();
+        stack->raise();
+        stack->activateWindow();
+        stack->update();
+        app.processEvents();
+
+        // 多次刷新确保界面显示
+        for (int i = 0; i < 5; i++) {
+            usleep(100000);
+            app.processEvents();
+        }
         stack->repaint();
         app.processEvents();
     }
