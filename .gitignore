@@ -1,0 +1,30 @@
+# Build directories
+build/
+build-arm/
+build/*
+build-arm/*
+
+# Compiled binaries
+*.o
+*.so
+*.a
+*.bin
+patternlock
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CMakeLists.txt.user
+
+# IDE
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
